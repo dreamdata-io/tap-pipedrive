@@ -67,16 +67,12 @@ class PipedriveTap(object):
             key_properties = stream.key_properties
 
             metadata = []
+            metadata.append({"breadcrumb": [], "metadata": {"selected": True}})
             for prop, json_schema in schema.properties.items():
-                inclusion = "available"
-                if prop in key_properties or (
-                    stream.state_field and prop == stream.state_field
-                ):
-                    inclusion = "automatic"
                 metadata.append(
                     {
                         "breadcrumb": ["properties", prop],
-                        "metadata": {"inclusion": inclusion},
+                        "metadata": {"inclusion": "automatic", "selected": True},
                     }
                 )
 
