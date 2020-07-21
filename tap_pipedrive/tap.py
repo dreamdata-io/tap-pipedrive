@@ -67,16 +67,12 @@ class PipedriveTap(object):
             key_properties = stream.key_properties
 
             metadata = []
+            metadata.append({"breadcrumb": [], "metadata": {"selected": True}})
             for prop, json_schema in schema.properties.items():
-                inclusion = "available"
-                if prop in key_properties or (
-                    stream.state_field and prop == stream.state_field
-                ):
-                    inclusion = "automatic"
                 metadata.append(
                     {
                         "breadcrumb": ["properties", prop],
-                        "metadata": {"inclusion": inclusion},
+                        "metadata": {"inclusion": "automatic", "selected": True},
                     }
                 )
 
@@ -224,22 +220,16 @@ class PipedriveTap(object):
 
             # records with metrics
             with singer.metrics.record_counter(stream.schema) as counter:
-                with singer.Transformer(
-                    singer.NO_INTEGER_DATETIME_PARSING
-                ) as optimus_prime:
-                    for row in self.iterate_response(response):
-                        row = stream.process_row(row)
 
-                        if (
-                            not row
-                        ):  # in case of a non-empty response with an empty element
-                            continue
-                        row = optimus_prime.transform(
-                            row, stream.get_schema(), stream_metadata
-                        )
-                        if stream.write_record(row):
-                            counter.increment()
-                        stream.update_state(row)
+                for row in self.iterate_response(response):
+                    row = stream.process_row(row)
+
+                    if not row:  # in case of a non-empty response with an empty element
+                        continue
+
+                    if stream.write_record(row):
+                        counter.increment()
+                    stream.update_state(row)
 
     def get_default_config(self):
         return CONFIG_DEFAULTS
