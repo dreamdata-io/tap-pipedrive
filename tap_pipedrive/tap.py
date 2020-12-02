@@ -6,7 +6,7 @@ from requests.exceptions import ConnectionError, RequestException
 from json import JSONDecodeError
 from singer import set_currently_syncing, metadata
 from singer.catalog import Catalog, CatalogEntry, Schema
-from .config import BASE_URL, CONFIG_DEFAULTS
+from .config import BASE_URL, CONFIG_DEFAULTS, OAUTH_URL
 from .exceptions import InvalidResponseException
 from .streams import (
     CurrenciesStream,
@@ -21,8 +21,6 @@ from .streams import (
     RecentFilesStream,
     RecentOrganizationsStream,
     RecentPersonsStream,
-
-
     DealStageChangeStream,
     DealsProductsStream,
 )
@@ -104,6 +102,8 @@ class PipedriveTap(object):
         ):
             resume_from_stream = False
             del self.state["currently_syncing"]
+
+        self.refresh_access_token()
 
         for stream in self.streams:
             if stream.schema not in selected_streams:
@@ -244,17 +244,41 @@ class PipedriveTap(object):
         return self.execute_request(stream.endpoint, params=params)
 
     def execute_request(self, endpoint, params=None):
-        headers = {"User-Agent": self.config["user-agent"]}
-        _params = {
-            "api_token": self.config["api_token"],
-        }
-        if params:
-            _params.update(params)
-
         url = "{}/{}".format(BASE_URL, endpoint)
-        logger.debug("Firing request at {} with params: {}".format(url, _params))
+        logger.debug("Firing request at {} with params: {}".format(url, params))
 
-        return requests.get(url, headers=headers, params=_params)
+        # TODO: remove this case when all customers have authed with oauth
+        if "api_token" in self.config:
+            params = {"api_token": self.config["api_token"], **params}
+            headers = {"User-Agent": self.config["user-agent"]}
+            return requests.get(url, headers=headers, params=params)
+
+        headers = {
+            "User-Agent": self.config["user-agent"],
+            "Authorization": f"Bearer {self.access_token}",
+        }
+        response = requests.get(url, headers=headers, params=params)
+
+        if response.status_code == 401:
+            # attempt to refresh access token
+            self.refresh_access_token()
+            headers["Authorization"] = f"Bearer {self.access_token}"
+            response = requests.get(url, headers=headers, params=params)
+
+        return response
+
+    def refresh_access_token(self):
+        # TODO: remove this check when all customers have authed with oauth
+        if "api_token" not in self.config:
+            payload = {
+                "grant_type": "refresh_token",
+                "refresh_token": self.config["refresh_token"],
+                "client_id": self.config["client_id"],
+                "client_secret": self.config["client_secret"],
+            }
+            resp = requests.post(OAUTH_URL + "/token", data=payload)
+            resp.raise_for_status()
+            self.access_token = resp.json()["access_token"]
 
     def validate_response(self, response):
         if isinstance(response, requests.Response) and response.status_code == 200:
@@ -287,4 +311,3 @@ class PipedriveTap(object):
                 "Required headers for rate throttling are not present in response header, "
                 "unable to throttle .."
             )
-
