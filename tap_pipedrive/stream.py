@@ -169,8 +169,9 @@ class PipedriveIterStream(PipedriveStream):
             self.next_start = self.start  # note pagination for next loop
 
             # find all deals ids for deals added or with stage changes after start and before stop
+            deal_ids = response.json()["data"] or []
             this_page_ids = self.find_deal_ids(
-                response.json()["data"], start=checkpoint, stop=self.stream_start
+                deal_ids, start=checkpoint, stop=self.stream_start
             )
 
             self.these_deals = (
