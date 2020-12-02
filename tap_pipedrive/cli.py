@@ -10,7 +10,7 @@ logger = singer.get_logger()
 
 
 def main_impl():
-    args = singer.utils.parse_args(["api_token", "start_date"])
+    args = singer.utils.parse_args(["start_date"])
 
     pipedrive_tap = PipedriveTap(args.config, args.state)
 
