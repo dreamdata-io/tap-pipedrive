@@ -248,7 +248,7 @@ class PipedriveTap(object):
         logger.debug("Firing request at {} with params: {}".format(url, params))
 
         # TODO: remove this case when all customers have authed with oauth
-        if "api_token" in self.config:
+        if self.config.get("api_token"):
             params = {"api_token": self.config["api_token"], **params}
             headers = {"User-Agent": self.config["user-agent"]}
             return requests.get(url, headers=headers, params=params)
