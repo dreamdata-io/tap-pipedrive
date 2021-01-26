@@ -268,17 +268,18 @@ class PipedriveTap(object):
         return response
 
     def refresh_access_token(self):
-        # TODO: remove this check when all customers have authed with oauth
-        if "api_token" not in self.config:
-            payload = {
-                "grant_type": "refresh_token",
-                "refresh_token": self.config["refresh_token"],
-                "client_id": self.config["client_id"],
-                "client_secret": self.config["client_secret"],
-            }
-            resp = requests.post(OAUTH_URL + "/token", data=payload)
-            resp.raise_for_status()
-            self.access_token = resp.json()["access_token"]
+        if self.config.get("api_token"):
+            return
+
+        payload = {
+            "grant_type": "refresh_token",
+            "refresh_token": self.config["refresh_token"],
+            "client_id": self.config["client_id"],
+            "client_secret": self.config["client_secret"],
+        }
+        resp = requests.post(OAUTH_URL + "/token", data=payload)
+        resp.raise_for_status()
+        self.access_token = resp.json()["access_token"]
 
     def validate_response(self, response):
         if isinstance(response, requests.Response) and response.status_code == 200:
