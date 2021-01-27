@@ -247,12 +247,6 @@ class PipedriveTap(object):
         url = "{}/{}".format(BASE_URL, endpoint)
         logger.debug("Firing request at {} with params: {}".format(url, params))
 
-        # TODO: remove this case when all customers have authed with oauth
-        if self.config.get("api_token"):
-            params = {"api_token": self.config["api_token"], **params}
-            headers = {"User-Agent": self.config["user-agent"]}
-            return requests.get(url, headers=headers, params=params)
-
         headers = {
             "User-Agent": self.config["user-agent"],
             "Authorization": f"Bearer {self.access_token}",
@@ -268,9 +262,6 @@ class PipedriveTap(object):
         return response
 
     def refresh_access_token(self):
-        if self.config.get("api_token"):
-            return
-
         payload = {
             "grant_type": "refresh_token",
             "refresh_token": self.config["refresh_token"],
