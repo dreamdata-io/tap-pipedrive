@@ -95,3 +95,4 @@ ENV/
 .mypy_cache/
 Pipfile*
 .vscode/
+config.json
